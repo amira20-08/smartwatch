@@ -1,0 +1,949 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Smart Cooling Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pink-50:#fff1f4; --pink-100:#ffe0e7; --pink-200:#ffc4d2; --pink-300:#ffa3b9;
+    --pink-400:#ff7a98; --pink-500:#ee5378; --pink-600:#d63a63; --pink-700:#b62a52;
+    --rose-grad: linear-gradient(135deg,#b62a52 0%,#d63a63 35%,#ee5378 65%,#ff7a6a 100%);
+    --card-grad: linear-gradient(160deg,#d6446b 0%,#e85e85 45%,#f590a4 100%);
+    --header-grad: linear-gradient(110deg,#b62a52 0%,#d6446b 50%,#ee5378 100%);
+    --footer-grad: linear-gradient(180deg,#c83361 0%,#a8244d 100%);
+    --metric-bg:#ffd4dd;
+    --white:#ffffff;
+    --green:#16a34a;
+    --green-bg:#e7f8ec;
+    --shadow: 0 8px 24px rgba(176,40,80,.18);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:#fff5f7;
+    color:#3a0f22;
+    min-height:100vh;
+    padding:24px;
+  }
+  .container{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+  .display-font{font-family:'Fredoka',sans-serif;letter-spacing:.03em}
+
+  /* Header */
+  .header{
+    background:var(--header-grad);
+    border-radius:24px;
+    padding:18px 24px;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    box-shadow:var(--shadow);color:#fff;
+  }
+  .header-left{display:flex;align-items:center;gap:16px}
+  .logo{
+    width:64px;height:64px;border-radius:50%;background:#fff;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    box-shadow:0 4px 12px rgba(0,0,0,.12);
+  }
+  .header h1{
+    font-family:'Fredoka',sans-serif;font-weight:700;
+    font-size:clamp(20px,3vw,30px);margin:0;letter-spacing:.05em;color:#fff;
+  }
+  .header-time{
+    background:#fff;color:#b62a52;border-radius:18px;padding:10px 18px;
+    display:flex;align-items:center;gap:10px;font-weight:600;font-size:13px;line-height:1.25;
+  }
+  .header-time .clock{width:18px;height:18px;color:#b62a52}
+
+  /* Grid rows */
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:860px){.grid-2{grid-template-columns:1fr}}
+
+  /* Cards */
+  .card{
+    background:var(--card-grad);
+    border-radius:22px;
+    padding:22px;
+    color:#fff;
+    box-shadow:var(--shadow);
+  }
+  .card-title{
+    display:flex;align-items:center;gap:10px;
+    font-family:'Fredoka',sans-serif;font-weight:600;
+    font-size:18px;letter-spacing:.05em;color:#fff;margin-bottom:18px;
+  }
+  .card-title svg{width:22px;height:22px}
+
+  /* Form */
+  .field{margin-bottom:14px}
+  .field label{display:block;font-weight:600;font-size:14px;margin-bottom:6px;color:#fff}
+  .field input{
+    width:100%;border:none;border-radius:14px;padding:13px 16px;
+    background:#fff;color:#7b1c3f;font-size:14px;outline:none;
+    font-family:inherit;
+  }
+  .field input::placeholder{color:#c98aa1}
+  .field input:focus{box-shadow:0 0 0 3px rgba(255,255,255,.4)}
+
+  .btn{
+    width:100%;border:none;border-radius:14px;padding:14px 18px;cursor:pointer;
+    font-family:'Inter',sans-serif;font-weight:600;font-size:15px;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    background:var(--rose-grad);color:#fff;
+    box-shadow:0 4px 14px rgba(176,40,80,.35);
+    transition:transform .12s,filter .12s;
+  }
+  .btn:hover{filter:brightness(1.05)}
+  .btn:active{transform:translateY(1px)}
+  .btn:disabled{opacity:.7;cursor:not-allowed}
+  .btn svg{width:18px;height:18px}
+
+  /* Micro:bit card */
+  .mb-center{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:6px 0 14px}
+  .bt-circle{
+    width:120px;height:120px;border-radius:50%;background:#ffe0e7;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:inset 0 -6px 18px rgba(176,40,80,.12);
+    margin-bottom:8px;
+  }
+  .bt-circle svg{width:54px;height:54px;color:#ee5378}
+  .mb-title{font-weight:700;font-size:16px;color:#fff;margin-top:6px}
+  .mb-sub{font-size:13px;color:#ffe0e7;margin-bottom:14px}
+
+  /* Control Mode */
+  .mode-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;background:#ffd4dd;border-radius:18px;padding:8px}
+  .mode-opt{
+    display:flex;align-items:center;gap:10px;padding:14px 14px;
+    border-radius:14px;cursor:pointer;font-weight:600;color:#a04060;
+    background:transparent;border:none;font-family:inherit;text-align:left;
+  }
+  .mode-opt small{display:block;font-weight:500;font-size:11.5px;color:#b85c7a;margin-top:2px}
+  .mode-opt.active{background:var(--rose-grad);color:#fff}
+  .mode-opt.active small{color:#ffe0e7}
+  .mode-opt svg{width:22px;height:22px;flex-shrink:0}
+
+  /* Fan status */
+  .fan-pill{
+    background:var(--green-bg);border-radius:16px;padding:18px 20px;
+    display:flex;align-items:center;gap:14px;color:var(--green);
+  }
+  .fan-pill .ring{
+    width:44px;height:44px;border-radius:50%;border:2.5px solid var(--green);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .fan-pill .ring svg{width:24px;height:24px;color:var(--green)}
+  .fan-pill .big{font-family:'Fredoka',sans-serif;font-weight:700;font-size:22px;line-height:1}
+  .fan-pill .small{font-size:13px;font-weight:500;margin-top:2px;color:#16a34a}
+
+  /* Metrics */
+  .metrics{
+    background:var(--metric-bg);border-radius:22px;padding:20px 14px;
+    display:grid;grid-template-columns:repeat(4,1fr);gap:8px;box-shadow:var(--shadow);
+  }
+  @media(max-width:760px){.metrics{grid-template-columns:repeat(2,1fr)}}
+  .metric{
+    display:flex;flex-direction:column;align-items:center;text-align:center;padding:8px 6px;
+    position:relative;
+  }
+  .metric + .metric::before{
+    content:"";position:absolute;left:0;top:18%;height:64%;width:1px;background:rgba(214,58,99,.25);
+  }
+  .metric .label{font-size:13px;color:#9c2a52;font-weight:600;margin-bottom:10px}
+  .metric .icon{
+    width:50px;height:50px;border-radius:50%;background:#ff8aa6;
+    display:flex;align-items:center;justify-content:center;margin-bottom:8px;
+  }
+  .metric .icon svg{width:26px;height:26px;color:#fff}
+  .metric .value{font-family:'Fredoka',sans-serif;font-size:22px;font-weight:700;color:#b62a52;line-height:1}
+  .metric .status{font-size:12px;color:#a04060;margin-top:6px}
+
+  /* Footer */
+  .footer{
+    background:var(--footer-grad);border-radius:22px;
+    padding:36px 28px 40px;color:#fff;position:relative;overflow:hidden;
+    box-shadow:var(--shadow);
+  }
+  .footer::before{
+    content:"";position:absolute;top:-30px;left:0;right:0;height:60px;background:#fff;
+    border-radius:50%/100%;transform:scaleX(1.2);
+  }
+  .footer-inner{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-top:14px}
+  .team-badge{
+    border:3px dashed #fff;padding:14px 28px;border-radius:6px;
+    font-family:'Fredoka',sans-serif;font-weight:700;font-size:32px;letter-spacing:.08em;
+    color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.1);
+  }
+  .members{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+  .chip{padding:8px 18px;border-radius:999px;font-weight:600;font-size:14px}
+  .chip-1{background:#bff09a;color:#3a7d2f}
+  .chip-2{background:#ffd28a;color:#b85c00}
+  .chip-3{background:#ffd0d4;color:#c4304f;border:1.5px solid #ee7a92}
+  .chip-4{background:#fff4cf;color:#7a5a00}
+
+  /* Toast */
+  .toast{
+    position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-20px);
+    background:#222;color:#fff;padding:12px 18px;border-radius:12px;
+    opacity:0;pointer-events:none;transition:all .25s;z-index:1000;font-size:14px;
+    box-shadow:0 8px 24px rgba(0,0,0,.2);
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.ok{background:#16a34a}
+  .toast.err{background:#dc2626}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo">
+        <svg viewBox="0 0 64 64" width="44" height="44" aria-hidden="true">
+          <g>
+            <ellipse cx="32" cy="20" rx="10" ry="14" fill="#ff7a98"/>
+            <ellipse cx="48" cy="32" rx="14" ry="10" fill="#ee5378"/>
+            <ellipse cx="32" cy="48" rx="10" ry="14" fill="#ff7a98"/>
+            <ellipse cx="16" cy="32" rx="14" ry="10" fill="#ee5378"/>
+            <circle cx="32" cy="32" r="6" fill="#fff4cf"/>
+            <line x1="32" y1="32" x2="44" y2="14" stroke="#ffd166" stroke-width="2"/>
+            <circle cx="44" cy="14" r="2" fill="#ffd166"/>
+          </g>
+        </svg>
+      </div>
+      <h1>SMART COOLING ROOM</h1>
+    </div>
+    <div class="header-time">
+      <svg class="clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <div><div id="time">--:-- --</div><div id="date">—</div></div>
+    </div>
+  </header>
+
+  <!-- Row 1 -->
+  <div class="grid-2">
+    <!-- Firebase Connection -->
+    <section class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 15a4 4 0 0 0 4 4h10a4 4 0 0 0 0-8 6 6 0 0 0-11.7-1.5A4 4 0 0 0 3 15z"/><path d="M12 13v6M9 16h6"/></svg>
+        FIREBASE CONNECTION
+      </div>
+      <form id="fbForm" autocomplete="off">
+        <div class="field">
+          <label for="fbApiKey">Firebase API Key</label>
+          <input id="fbApiKey" type="text" placeholder="https://your-project-id.firebaesio.com/apiKey" />
+        </div>
+        <div class="field">
+          <label for="fbUrl">Database URL</label>
+          <input id="fbUrl" type="text" placeholder="https://your-project-id.firebaesio.com/" />
+        </div>
+        <div class="field">
+          <label for="fbNode">Database Node</label>
+          <input id="fbNode" type="text" placeholder="your-database-node" />
+        </div>
+        <button class="btn" type="submit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>
+          Connect to Firebase
+        </button>
+      </form>
+    </section>
+
+    <!-- Microbit -->
+    <section class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7l10 10-5 5V2l5 5L7 17"/></svg>
+        MICRO:BIT CONNECTION
+      </div>
+      <div class="mb-center">
+        <div class="bt-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 7l10 10-5 5V2l5 5L7 17"/></svg>
+        </div>
+        <div class="mb-title">Connect to your micro:bit</div>
+        <div class="mb-sub">Make sure Bluetooth is enabled</div>
+        <button id="btBtn" class="btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7l10 10-5 5V2l5 5L7 17"/></svg>
+          Connect to micro:bit
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <!-- Row 2 -->
+  <div class="grid-2">
+    <section class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M5 19l3-3M16 8l3-3"/></svg>
+        CONTROL MODE
+      </div>
+      <div class="mode-row" id="modeRow">
+        <button class="mode-opt active" data-mode="auto" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5z"/></svg>
+          <span>Automatic<small>System runs automatically</small></span>
+        </button>
+        <button class="mode-opt" data-mode="manual" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11V6a2 2 0 1 1 4 0v5"/><path d="M13 11V4a2 2 0 1 1 4 0v9"/><path d="M17 13V7a2 2 0 1 1 4 0v9a6 6 0 0 1-6 6h-2a6 6 0 0 1-6-6v-2l-3-3a2 2 0 0 1 3-3l3 3"/></svg>
+          <span>Manual<small>Control fan manually</small></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 12a4 4 0 0 1 4-8 4 4 0 0 1 0 8M12 12a4 4 0 0 1-4 8 4 4 0 0 1 0-8M12 12a4 4 0 0 1 8 4 4 4 0 0 1-8 0M12 12a4 4 0 0 1-8-4 4 4 0 0 1 8 0"/></svg>
+        FAN STATUS
+      </div>
+      <div class="fan-pill" id="fanPill">
+        <div class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 12a4 4 0 0 1 4-8 4 4 0 0 1 0 8M12 12a4 4 0 0 1-4 8 4 4 0 0 1 0-8M12 12a4 4 0 0 1 8 4 4 4 0 0 1-8 0M12 12a4 4 0 0 1-8-4 4 4 0 0 1 8 0"/></svg></div>
+        <div>
+          <div class="big" id="fanState">ON</div>
+          <div class="small" id="fanSub">Fan is running</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Metrics -->
+  <section class="metrics">
+    <div class="metric">
+      <div class="label">Temperature</div>
+      <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 4a2 2 0 0 0-4 0v10a4 4 0 1 0 4 0V4z"/></svg></div>
+      <div class="value"><span id="mTemp">28.5</span> °C</div>
+      <div class="status">Comfortable</div>
+    </div>
+    <div class="metric">
+      <div class="label">Humidity</div>
+      <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3s6 7 6 12a6 6 0 1 1-12 0c0-5 6-12 6-12z"/></svg></div>
+      <div class="value"><span id="mHum">62</span>%</div>
+      <div class="status">Normal</div>
+    </div>
+    <div class="metric">
+      <div class="label">Fan Speed</div>
+      <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 12a4 4 0 0 1 4-8 4 4 0 0 1 0 8M12 12a4 4 0 0 1-4 8 4 4 0 0 1 0-8M12 12a4 4 0 0 1 8 4 4 4 0 0 1-8 0M12 12a4 4 0 0 1-8-4 4 4 0 0 1 8 0"/></svg></div>
+      <div class="value"><span id="mFan">28.5</span> °C</div>
+      <div class="status">Comfortable</div>
+    </div>
+    <div class="metric">
+      <div class="label">Mode</div>
+      <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></div>
+      <div class="value" id="mMode">AUTO</div>
+      <div class="status" id="mModeSub">Automatic</div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="team-badge">TEAM 2</div>
+      <div class="members">
+        <span class="chip chip-1">Anna L.K</span>
+        <span class="chip chip-2">Nirvana S</span>
+        <span class="chip chip-3">Khansa K</span>
+        <span class="chip chip-4">Faiza A.M</span>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+  // Toast helper
+  const toastEl = document.getElementById('toast');
+  function toast(msg, type){
+    toastEl.textContent = msg;
+    toastEl.className = 'toast show ' + (type||'');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(()=>{ toastEl.className='toast'; }, 2600);
+  }
+
+  // Clock
+  function tick(){
+    const d = new Date();
+    let h = d.getHours(), m = d.getMinutes();
+    const am = h < 12 ? 'AM':'PM';
+    h = h % 12 || 12;
+    document.getElementById('time').textContent =
+      String(h).padStart(2,'0') + '.' + String(m).padStart(2,'0') + ' ' + am;
+    document.getElementById('date').textContent =
+      d.toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'});
+  }
+  tick(); setInterval(tick, 1000);
+
+  const fbApiKey = document.getElementById('fbApiKey');
+  const fbUrl = document.getElementById('fbUrl');
+  const fbNode = document.getElementById('fbNode');
+  const btBtn = document.getElementById('btBtn');
+  const firebaseLogPrefix = '[Firebase]';
+  const bluetoothLogPrefix = '[Bluetooth]';
+
+  const MICROBIT_SERVICES = {
+    genericAccess: 'generic_access',
+    battery: 'battery_service',
+    deviceInfo: 'device_information',
+    temperature: 'e95d6100-251d-470a-a062-fa1922dfa9a8',
+    accelerometer: 'e95d0753-251d-470a-a062-fa1922dfa9a8',
+    button: 'e95d9882-251d-470a-a062-fa1922dfa9a8',
+    led: 'e95dd91d-251d-470a-a062-fa1922dfa9a8',
+    ioPin: 'e95d127b-251d-470a-a062-fa1922dfa9a8',
+    magnetometer: 'e95df2d8-251d-470a-a062-fa1922dfa9a8',
+    uart: '6e400001-b5a3-f393-e0a9-e50e24dcca9e'
+  };
+  const MICROBIT_CHARACTERISTICS = {
+    temperature: 'e95d9250-251d-470a-a062-fa1922dfa9a8',
+    accelerometerData: 'e95dca4b-251d-470a-a062-fa1922dfa9a8',
+    buttonA: 'e95dda90-251d-470a-a062-fa1922dfa9a8',
+    buttonB: 'e95dda91-251d-470a-a062-fa1922dfa9a8',
+    uartTx: '6e400003-b5a3-f393-e0a9-e50e24dcca9e',
+    uartRx: '6e400002-b5a3-f393-e0a9-e50e24dcca9e',
+    batteryLevel: 'battery_level'
+  };
+
+  const appState = {
+    firebase: {
+      connected: false,
+      apiKey: '',
+      url: '',
+      node: '',
+      listenUrl: '',
+      eventSource: null,
+      pollTimer: null,
+      lastJson: '',
+      errorShown: false
+    },
+    bluetooth: {
+      device: null,
+      server: null,
+      connected: false,
+      values: {
+        temperature: undefined,
+        humidity: undefined,
+        fanSpeed: undefined,
+        mode: undefined,
+        fanStatus: undefined,
+        accelerometerX: undefined,
+        accelerometerY: undefined,
+        accelerometerZ: undefined,
+        battery: undefined,
+        buttonA: undefined,
+        buttonB: undefined,
+        raw: undefined
+      }
+    }
+  };
+
+  function normalizeDatabaseUrl(url){
+    let clean = String(url || '').trim();
+    if(!clean) return '';
+    if(!/^https?:\/\//i.test(clean)) clean = 'https://' + clean;
+    return clean.replace(/\/+$/,'');
+  }
+
+  function normalizeNodePath(node){
+    return String(node || '').trim().replace(/^\/+|\.json$/g,'');
+  }
+
+  function firebaseJsonUrl(url, node){
+    return normalizeDatabaseUrl(url) + '/' + normalizeNodePath(node) + '.json';
+  }
+
+  function firebaseStreamUrl(url, node){
+    return firebaseJsonUrl(url, node);
+  }
+
+  function parseNumber(value){
+    if(value === undefined || value === null || value === '') return undefined;
+    if(typeof value === 'number' && Number.isFinite(value)) return value;
+    const parsed = Number(String(value).replace(',', '.').trim());
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  function roundValue(value, digits){
+    const num = parseNumber(value);
+    if(num === undefined) return value;
+    return Number(num.toFixed(digits));
+  }
+
+  function getNested(source, paths){
+    for(const path of paths){
+      const parts = path.split('.');
+      let current = source;
+      let ok = true;
+      for(const part of parts){
+        if(current && typeof current === 'object' && part in current){
+          current = current[part];
+        }else{
+          ok = false;
+          break;
+        }
+      }
+      if(ok && current !== undefined && current !== null && current !== '') return current;
+    }
+    return undefined;
+  }
+
+  function pickLatestRecord(payload){
+    if(!payload || typeof payload !== 'object' || Array.isArray(payload)) return payload;
+    if(payload.sensor && typeof payload.sensor === 'object') return payload.sensor;
+    if(payload.liveSensor && typeof payload.liveSensor === 'object') return payload.liveSensor;
+    if(payload.data && typeof payload.data === 'object') return payload.data;
+    const keys = Object.keys(payload);
+    const looksLikeList = keys.length > 0 && keys.every(k => payload[k] && typeof payload[k] === 'object');
+    if(!looksLikeList) return payload;
+    let latest = null;
+    let latestTime = -Infinity;
+    for(const key of keys){
+      const item = payload[key];
+      const time = parseNumber(item.timestamp ?? item.updatedAt ?? item.time ?? item.createdAt ?? key) ?? 0;
+      if(time >= latestTime){
+        latest = item;
+        latestTime = time;
+      }
+    }
+    return latest || payload;
+  }
+
+  function normalizeSensorPayload(payload){
+    const source = pickLatestRecord(payload);
+    if(source === undefined || source === null) return null;
+    if(typeof source === 'number' || typeof source === 'string'){
+      return { temperature: source };
+    }
+    if(typeof source !== 'object') return null;
+
+    const temp = getNested(source, ['temperature','temp','sensorValue','value','reading','data.temperature','sensor.temperature','liveSensor.temperature']);
+    const hum = getNested(source, ['humidity','hum','kelembapan','data.humidity','sensor.humidity','liveSensor.humidity']);
+    const fan = getNested(source, ['fanSpeed','fan_speed','speed','fan','pwm','data.fanSpeed','sensor.fanSpeed']);
+    const mode = getNested(source, ['mode','controlMode','control_mode','data.mode','sensor.mode']);
+    const fanStatus = getNested(source, ['fanStatus','fanState','fan_status','fanOn','fan_on','isFanOn','relay','data.fanStatus','sensor.fanStatus']);
+    const battery = getNested(source, ['battery','batteryLevel','battery_level']);
+    const ax = getNested(source, ['accelerometerX','accelX','x','accelerometer.x','acc.x']);
+    const ay = getNested(source, ['accelerometerY','accelY','y','accelerometer.y','acc.y']);
+    const az = getNested(source, ['accelerometerZ','accelZ','z','accelerometer.z','acc.z']);
+
+    return {
+      temperature: temp,
+      humidity: hum,
+      fanSpeed: fan,
+      mode,
+      fanStatus,
+      battery,
+      accelerometerX: ax,
+      accelerometerY: ay,
+      accelerometerZ: az,
+      raw: source
+    };
+  }
+
+  function formatDisplayValue(value, digits){
+    if(value === undefined || value === null || value === '') return undefined;
+    const num = parseNumber(value);
+    if(num === undefined) return String(value);
+    return String(Number(num.toFixed(digits)));
+  }
+
+  function isFanOn(value){
+    if(value === undefined || value === null || value === '') return undefined;
+    if(typeof value === 'boolean') return value;
+    const normalized = String(value).trim().toLowerCase();
+    if(['true','on','1','yes','running','run','active','nyala'].includes(normalized)) return true;
+    if(['false','off','0','no','stopped','stop','inactive','mati'].includes(normalized)) return false;
+    const numberValue = parseNumber(value);
+    if(numberValue !== undefined) return numberValue > 0;
+    return undefined;
+  }
+
+  function applyFirebaseSensor(payload){
+    const sensor = normalizeSensorPayload(payload);
+    if(!sensor){
+      console.warn(firebaseLogPrefix, 'No readable sensor payload:', payload);
+      return;
+    }
+    console.log(firebaseLogPrefix, 'Incoming sensor data:', sensor);
+    const temp = formatDisplayValue(sensor.temperature, 1);
+    const hum = formatDisplayValue(sensor.humidity, 0);
+    const fan = formatDisplayValue(sensor.fanSpeed, 1);
+    if(temp !== undefined) document.getElementById('mTemp').textContent = temp;
+    if(hum !== undefined) document.getElementById('mHum').textContent = hum;
+    if(fan !== undefined) document.getElementById('mFan').textContent = fan;
+    if(typeof sensor.mode === 'string' && sensor.mode.trim()){
+      const normalizedMode = sensor.mode.trim().toLowerCase();
+      const upper = normalizedMode === 'automatic' ? 'AUTO' : normalizedMode === 'manual' ? 'MANUAL' : sensor.mode.trim().toUpperCase();
+      document.getElementById('mMode').textContent = upper;
+      document.getElementById('mModeSub').textContent = upper === 'AUTO' ? 'Automatic' : upper === 'MANUAL' ? 'Manual' : sensor.mode.trim();
+      document.querySelectorAll('.mode-opt').forEach(btn=>{
+        btn.classList.toggle('active', btn.dataset.mode === (upper === 'MANUAL' ? 'manual' : 'auto'));
+      });
+    }
+    const on = isFanOn(sensor.fanStatus);
+    if(on !== undefined){
+      document.getElementById('fanState').textContent = on ? 'ON' : 'OFF';
+      document.getElementById('fanSub').textContent = on ? 'Fan is running' : 'Fan is stopped';
+    }
+  }
+
+  function stopFirebaseSensor(){
+    if(appState.firebase.eventSource){
+      appState.firebase.eventSource.close();
+      appState.firebase.eventSource = null;
+    }
+    if(appState.firebase.pollTimer){
+      clearInterval(appState.firebase.pollTimer);
+      appState.firebase.pollTimer = null;
+    }
+  }
+
+  async function readFirebaseOnce(){
+    if(!appState.firebase.listenUrl) return null;
+    console.log(firebaseLogPrefix, 'Reading:', appState.firebase.listenUrl);
+    const res = await fetch(appState.firebase.listenUrl, { cache:'no-store' });
+    if(!res.ok){
+      const body = await res.text().catch(()=> '');
+      throw new Error('Firebase read failed: HTTP ' + res.status + (body ? ' - ' + body.slice(0,120) : ''));
+    }
+    const payload = await res.json();
+    console.log(firebaseLogPrefix, 'Read success:', payload);
+    applyFirebaseSensor(payload);
+    return payload;
+  }
+
+  function startFirebasePolling(){
+    if(appState.firebase.pollTimer) clearInterval(appState.firebase.pollTimer);
+    const poll = async()=>{
+      try{
+        const payload = await readFirebaseOnce();
+        const json = JSON.stringify(payload);
+        if(json !== appState.firebase.lastJson){
+          appState.firebase.lastJson = json;
+          appState.firebase.errorShown = false;
+        }
+      }catch(err){
+        console.error(firebaseLogPrefix, 'Read error:', err);
+        if(!appState.firebase.errorShown){
+          toast(err.message || 'Firebase read failed', 'err');
+          appState.firebase.errorShown = true;
+        }
+      }
+    };
+    poll();
+    appState.firebase.pollTimer = setInterval(poll, 2000);
+  }
+
+  function startFirebaseStream(){
+    if(!window.EventSource){
+      console.warn(firebaseLogPrefix, 'EventSource unavailable, using polling.');
+      startFirebasePolling();
+      return;
+    }
+    try{
+      const streamUrl = firebaseStreamUrl(appState.firebase.url, appState.firebase.node);
+      console.log(firebaseLogPrefix, 'Opening realtime listener:', streamUrl);
+      const source = new EventSource(streamUrl);
+      appState.firebase.eventSource = source;
+      source.onopen = ()=>{
+        console.log(firebaseLogPrefix, 'Realtime listener connected.');
+        appState.firebase.connected = true;
+        appState.firebase.errorShown = false;
+      };
+      source.onmessage = (event)=>{
+        try{
+          if(!event.data || event.data === 'null') return;
+          const message = JSON.parse(event.data);
+          const payload = message && typeof message === 'object' && 'data' in message ? message.data : message;
+          console.log(firebaseLogPrefix, 'Realtime update:', payload);
+          if(payload !== null) applyFirebaseSensor(payload);
+        }catch(err){
+          console.error(firebaseLogPrefix, 'Realtime parse error:', err, event.data);
+        }
+      };
+      source.onerror = (err)=>{
+        console.error(firebaseLogPrefix, 'Realtime listener error, polling fallback active:', err);
+        if(!appState.firebase.pollTimer) startFirebasePolling();
+      };
+    }catch(err){
+      console.error(firebaseLogPrefix, 'Realtime listener failed:', err);
+      startFirebasePolling();
+    }
+  }
+
+  async function writeFirebaseSensor(partial){
+    if(!appState.firebase.listenUrl){
+      console.warn(firebaseLogPrefix, 'Write skipped because Firebase is not configured.', partial);
+      return false;
+    }
+    const body = Object.assign({}, partial, { updatedAt: Date.now(), source: 'microbit-bluetooth' });
+    try{
+      console.log(firebaseLogPrefix, 'Writing sensor data:', body);
+      const res = await fetch(appState.firebase.listenUrl, {
+        method:'PATCH',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify(body)
+      });
+      if(!res.ok){
+        const text = await res.text().catch(()=> '');
+        throw new Error('Firebase write failed: HTTP ' + res.status + (text ? ' - ' + text.slice(0,120) : ''));
+      }
+      const result = await res.json().catch(()=> null);
+      console.log(firebaseLogPrefix, 'Write success:', result);
+      appState.firebase.errorShown = false;
+      return true;
+    }catch(err){
+      console.error(firebaseLogPrefix, 'Write error:', err);
+      toast(err.message || 'Firebase write failed', 'err');
+      return false;
+    }
+  }
+
+  async function startFirebaseSensor(url, node, apiKey){
+    stopFirebaseSensor();
+    appState.firebase.apiKey = apiKey || '';
+    appState.firebase.url = normalizeDatabaseUrl(url);
+    appState.firebase.node = normalizeNodePath(node);
+    appState.firebase.listenUrl = firebaseJsonUrl(appState.firebase.url, appState.firebase.node);
+    appState.firebase.lastJson = '';
+    appState.firebase.errorShown = false;
+    console.log(firebaseLogPrefix, 'Configuration:', {
+      url: appState.firebase.url,
+      node: appState.firebase.node,
+      apiKeyProvided: Boolean(appState.firebase.apiKey)
+    });
+    try{
+      await readFirebaseOnce();
+      const testWriteOk = await writeFirebaseSensor({ connectionStatus: 'connected' });
+      console.log(firebaseLogPrefix, 'Verification:', { read: true, write: testWriteOk });
+      startFirebaseStream();
+      toast('Connected to Firebase configuration', 'ok');
+    }catch(err){
+      console.error(firebaseLogPrefix, 'Connection error:', err);
+      toast(err.message || 'Firebase connection failed', 'err');
+      startFirebasePolling();
+    }
+  }
+
+  try {
+    const saved = JSON.parse(localStorage.getItem('scr.firebase')||'null');
+    if(saved){
+      fbApiKey.value = saved.apiKey||'';
+      fbUrl.value    = saved.url||'';
+      fbNode.value   = saved.node||'';
+      if(saved.url && saved.node) startFirebaseSensor(saved.url, saved.node, saved.apiKey);
+    }
+  } catch(e){
+    console.warn(firebaseLogPrefix, 'Saved configuration could not be loaded:', e);
+  }
+
+  // Firebase form submit
+  document.getElementById('fbForm').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const data = {
+      apiKey: fbApiKey.value.trim(),
+      url:    fbUrl.value.trim(),
+      node:   fbNode.value.trim(),
+    };
+    if(!data.apiKey || !data.url || !data.node){
+      toast('Please fill all Firebase fields', 'err'); return;
+    }
+    localStorage.setItem('scr.firebase', JSON.stringify(data));
+    startFirebaseSensor(data.url, data.node, data.apiKey);
+  });
+
+  // Control mode toggle
+  document.querySelectorAll('.mode-opt').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      document.querySelectorAll('.mode-opt').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const mode = btn.dataset.mode;
+      document.getElementById('mMode').textContent = mode === 'auto' ? 'AUTO' : 'MANUAL';
+      document.getElementById('mModeSub').textContent = mode === 'auto' ? 'Automatic' : 'Manual';
+      await writeFirebaseSensor({ mode: mode === 'auto' ? 'AUTO' : 'MANUAL' });
+    });
+  });
+
+  function updateBluetoothButton(){
+    btBtn.lastChild.textContent = appState.bluetooth.connected ? ' Disconnect micro:bit' : ' Connect to micro:bit';
+  }
+
+  function mergeAndDisplayMicrobitData(partial){
+    Object.assign(appState.bluetooth.values, partial);
+    const data = {};
+    if(appState.bluetooth.values.temperature !== undefined) data.temperature = roundValue(appState.bluetooth.values.temperature, 1);
+    if(appState.bluetooth.values.humidity !== undefined) data.humidity = roundValue(appState.bluetooth.values.humidity, 0);
+    if(appState.bluetooth.values.fanSpeed !== undefined) data.fanSpeed = roundValue(appState.bluetooth.values.fanSpeed, 1);
+    if(appState.bluetooth.values.mode !== undefined) data.mode = appState.bluetooth.values.mode;
+    if(appState.bluetooth.values.fanStatus !== undefined) data.fanStatus = appState.bluetooth.values.fanStatus;
+    if(appState.bluetooth.values.battery !== undefined) data.battery = roundValue(appState.bluetooth.values.battery, 0);
+    if(appState.bluetooth.values.accelerometerX !== undefined) data.accelerometerX = appState.bluetooth.values.accelerometerX;
+    if(appState.bluetooth.values.accelerometerY !== undefined) data.accelerometerY = appState.bluetooth.values.accelerometerY;
+    if(appState.bluetooth.values.accelerometerZ !== undefined) data.accelerometerZ = appState.bluetooth.values.accelerometerZ;
+    if(appState.bluetooth.values.raw !== undefined) data.raw = appState.bluetooth.values.raw;
+    console.log(bluetoothLogPrefix, 'Incoming sensor data:', data);
+    applyFirebaseSensor(data);
+    writeFirebaseSensor(data);
+  }
+
+  function parseTextSensorData(text){
+    const clean = String(text || '').trim();
+    if(!clean) return null;
+    try{
+      const json = JSON.parse(clean);
+      return normalizeSensorPayload(json) || json;
+    }catch(e){
+      // Continue with key/value parsing.
+    }
+    const result = {};
+    clean.split(/[;,\n]+/).map(part=>part.trim()).filter(Boolean).forEach(part=>{
+      const pieces = part.split(/[:=]/);
+      if(pieces.length < 2) return;
+      const key = pieces.shift().trim().toLowerCase();
+      const value = pieces.join('=').trim();
+      if(['t','temp','temperature','suhu'].includes(key)) result.temperature = parseNumber(value) ?? value;
+      else if(['h','hum','humidity','kelembapan'].includes(key)) result.humidity = parseNumber(value) ?? value;
+      else if(['fan','fanspeed','speed','pwm'].includes(key)) result.fanSpeed = parseNumber(value) ?? value;
+      else if(['mode'].includes(key)) result.mode = value;
+      else if(['fanstatus','fanstate','relay','fanon'].includes(key)) result.fanStatus = value;
+      else result[key] = parseNumber(value) ?? value;
+    });
+    if(Object.keys(result).length) return result;
+    const numeric = parseNumber(clean);
+    if(numeric !== undefined) return { temperature: numeric };
+    return { raw: clean };
+  }
+
+  function signed16(dataView, offset){
+    return dataView.getInt16(offset, true);
+  }
+
+  async function subscribeCharacteristic(service, characteristicUuid, onValue){
+    try{
+      const characteristic = await service.getCharacteristic(characteristicUuid);
+      characteristic.addEventListener('characteristicvaluechanged', event=>{
+        try{ onValue(event.target.value); }
+        catch(err){ console.error(bluetoothLogPrefix, 'Sensor parse error:', err); }
+      });
+      await characteristic.startNotifications();
+      try{ onValue(await characteristic.readValue()); }catch(e){}
+      console.log(bluetoothLogPrefix, 'Subscribed to characteristic:', characteristicUuid);
+      return characteristic;
+    }catch(err){
+      console.warn(bluetoothLogPrefix, 'Characteristic unavailable:', characteristicUuid, err);
+      return null;
+    }
+  }
+
+  async function setupMicrobitSensors(server){
+    try{
+      const tempService = await server.getPrimaryService(MICROBIT_SERVICES.temperature);
+      await subscribeCharacteristic(tempService, MICROBIT_CHARACTERISTICS.temperature, value=>{
+        mergeAndDisplayMicrobitData({ temperature: value.getInt8(0) });
+      });
+    }catch(err){
+      console.warn(bluetoothLogPrefix, 'Temperature service unavailable:', err);
+    }
+
+    try{
+      const accelerometerService = await server.getPrimaryService(MICROBIT_SERVICES.accelerometer);
+      await subscribeCharacteristic(accelerometerService, MICROBIT_CHARACTERISTICS.accelerometerData, value=>{
+        mergeAndDisplayMicrobitData({
+          accelerometerX: signed16(value,0),
+          accelerometerY: signed16(value,2),
+          accelerometerZ: signed16(value,4)
+        });
+      });
+    }catch(err){
+      console.warn(bluetoothLogPrefix, 'Accelerometer service unavailable:', err);
+    }
+
+    try{
+      const buttonService = await server.getPrimaryService(MICROBIT_SERVICES.button);
+      await subscribeCharacteristic(buttonService, MICROBIT_CHARACTERISTICS.buttonA, value=>{
+        mergeAndDisplayMicrobitData({ buttonA: value.getUint8(0) });
+      });
+      await subscribeCharacteristic(buttonService, MICROBIT_CHARACTERISTICS.buttonB, value=>{
+        mergeAndDisplayMicrobitData({ buttonB: value.getUint8(0) });
+      });
+    }catch(err){
+      console.warn(bluetoothLogPrefix, 'Button service unavailable:', err);
+    }
+
+    try{
+      const batteryService = await server.getPrimaryService(MICROBIT_SERVICES.battery);
+      await subscribeCharacteristic(batteryService, MICROBIT_CHARACTERISTICS.batteryLevel, value=>{
+        mergeAndDisplayMicrobitData({ battery: value.getUint8(0) });
+      });
+    }catch(err){
+      console.warn(bluetoothLogPrefix, 'Battery service unavailable:', err);
+    }
+
+    try{
+      const uartService = await server.getPrimaryService(MICROBIT_SERVICES.uart);
+      await subscribeCharacteristic(uartService, MICROBIT_CHARACTERISTICS.uartTx, value=>{
+        const text = new TextDecoder().decode(value.buffer);
+        const parsed = parseTextSensorData(text);
+        if(parsed) mergeAndDisplayMicrobitData(parsed);
+      });
+    }catch(err){
+      console.warn(bluetoothLogPrefix, 'UART service unavailable. Flash micro:bit with Bluetooth UART if sending custom humidity/fan data:', err);
+    }
+  }
+
+  function handleBluetoothDisconnected(){
+    console.log(bluetoothLogPrefix, 'Disconnected.');
+    appState.bluetooth.connected = false;
+    appState.bluetooth.server = null;
+    updateBluetoothButton();
+    toast('micro:bit disconnected', 'err');
+  }
+
+  async function disconnectMicrobit(){
+    try{
+      if(appState.bluetooth.device && appState.bluetooth.device.gatt && appState.bluetooth.device.gatt.connected){
+        appState.bluetooth.device.gatt.disconnect();
+      }
+      handleBluetoothDisconnected();
+    }catch(err){
+      console.error(bluetoothLogPrefix, 'Disconnect error:', err);
+      toast(err.message || 'Bluetooth disconnect failed', 'err');
+    }
+  }
+
+  async function connectMicrobit(){
+    if(!navigator.bluetooth){
+      console.error(bluetoothLogPrefix, 'Web Bluetooth unsupported.');
+      toast('Web Bluetooth not supported in this browser', 'err'); return;
+    }
+    try{
+      console.log(bluetoothLogPrefix, 'Opening chooser with micro:bit-only filters.');
+      const device = await navigator.bluetooth.requestDevice({
+        filters: [
+          { namePrefix: 'BBC micro:bit' },
+          { namePrefix: 'micro:bit' }
+        ],
+        optionalServices: Object.values(MICROBIT_SERVICES)
+      });
+      console.log(bluetoothLogPrefix, 'Selected device:', device.name || device.id);
+      appState.bluetooth.device = device;
+      device.addEventListener('gattserverdisconnected', handleBluetoothDisconnected);
+      const server = await device.gatt.connect();
+      appState.bluetooth.server = server;
+      appState.bluetooth.connected = true;
+      updateBluetoothButton();
+      console.log(bluetoothLogPrefix, 'Connected:', device.name || device.id);
+      toast('Connected to ' + (device.name || 'micro:bit'), 'ok');
+      await setupMicrobitSensors(server);
+      console.log(bluetoothLogPrefix, 'Sensor subscriptions ready.');
+    }catch(err){
+      console.error(bluetoothLogPrefix, 'Connection error:', err);
+      appState.bluetooth.connected = false;
+      updateBluetoothButton();
+      toast(err.message || 'Bluetooth request cancelled', 'err');
+    }
+  }
+
+  // micro:bit Bluetooth — filter so only micro:bit devices appear
+  btBtn.addEventListener('click', async ()=>{
+    if(appState.bluetooth.connected) await disconnectMicrobit();
+    else await connectMicrobit();
+  });
+</script>
+</body>
+</html>
