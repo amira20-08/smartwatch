@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EcoPulse Watch</title>
+
+  <!-- Firebase SDK (compat v9) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Boogaloo&family=Nunito:wght@400;600;700&display=swap');
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background-color: #6ea8d8;
+      background-image:
+        radial-gradient(ellipse 80% 60% at 15% 30%, #4a7db5 0%, transparent 55%),
+        radial-gradient(ellipse 60% 80% at 85% 70%, #3a6aa0 0%, transparent 55%),
+        radial-gradient(ellipse 50% 40% at 50% 85%, #5590c4 0%, transparent 50%);
+      font-family: 'Nunito', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 20px 48px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Decorative background blobs */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -80px;
+      left: -60px;
+      width: 340px;
+      height: 340px;
+      background: #3a6aa0;
+      border-radius: 50% 40% 60% 30% / 40% 60% 30% 60%;
+      opacity: 0.55;
+      z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      bottom: -100px;
+      right: -80px;
+      width: 400px;
+      height: 400px;
+      background: #2d5a8e;
+      border-radius: 30% 60% 40% 70% / 60% 30% 70% 40%;
+      opacity: 0.45;
+      z-index: 0;
+    }
+
+    /* Star decorations */
+    .star {
+      position: fixed;
+      z-index: 1;
+      pointer-events: none;
+    }
+    .star-tl {
+      top: 28px;
+      left: 18px;
+      width: 80px;
+      height: 80px;
+    }
+    .star-tr {
+      top: 12px;
+      right: 14px;
+      width: 70px;
+      height: 70px;
+    }
+    /* Pink/salmon decorative shape upper-right */
+    .deco-pink-tr {
+      position: fixed;
+      top: 0;
+      right: -20px;
+      width: 130px;
+      height: 180px;
+      background: #d8a0a8;
+      border-radius: 50% 30% 60% 40%;
+      opacity: 0.55;
+      z-index: 1;
+      pointer-events: none;
+    }
+    /* Tan/beige top-left swoosh */
+    .deco-tan-tl {
+      position: fixed;
+      top: 30px;
+      left: -30px;
+      width: 160px;
+      height: 100px;
+      background: #e8cdb0;
+      border-radius: 40% 60% 30% 70%;
+      opacity: 0.55;
+      z-index: 1;
+      pointer-events: none;
+      transform: rotate(-20deg);
+    }
+    /* Tan spinning-top shape mid-right */
+    .deco-top-mr {
+      position: fixed;
+      top: 52%;
+      right: -30px;
+      width: 100px;
+      height: 140px;
+      background: #e8cdb0;
+      clip-path: polygon(50% 0%, 100% 40%, 60% 50%, 100% 100%, 0% 100%, 40% 50%, 0% 40%);
+      opacity: 0.65;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Content wrapper */
+    .content {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    /* Title */
+    h1.title {
+      font-family: 'Boogaloo', cursive;
+      font-size: 2.8rem;
+      color: #e8f5a0;
+      text-align: center;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      -webkit-text-stroke: 1px rgba(0,0,0,0.08);
+    }
+
+    /* Card panels */
+    .card {
+      background: rgba(180, 210, 240, 0.38);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 22px;
+      padding: 22px 22px 26px;
+      border: 1px solid rgba(255,255,255,0.25);
+    }
+
+    .card-title {
+      font-family: 'Boogaloo', cursive;
+      font-size: 1.3rem;
+      color: #e8f5a0;
+      text-align: center;
+      letter-spacing: 1.5px;
+      margin-bottom: 18px;
+    }
+
+    /* Input fields */
+    .input-field {
+      width: 100%;
+      background: rgba(255,255,255,0.18);
+      border: 1.5px solid rgba(255,255,255,0.4);
+      border-radius: 999px;
+      padding: 13px 20px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.95rem;
+      color: #e8f0f8;
+      outline: none;
+      margin-bottom: 12px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .input-field::placeholder {
+      color: rgba(220,235,255,0.6);
+    }
+    .input-field:focus {
+      border-color: rgba(255,255,255,0.7);
+      background: rgba(255,255,255,0.26);
+    }
+
+    /* Connect to Firebase button */
+    .btn-firebase {
+      width: 100%;
+      background: #e8f5a0;
+      border: none;
+      border-radius: 999px;
+      padding: 15px 20px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #2255a0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: opacity 0.2s, transform 0.1s;
+      margin-top: 4px;
+    }
+    .btn-firebase:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-firebase:active { opacity: 0.8; transform: translateY(0); }
+    .btn-firebase:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+    /* Bluetooth buttons */
+    .btn-bt-connect {
+      width: 100%;
+      background: #3d56c8;
+      border: none;
+      border-radius: 999px;
+      padding: 15px 20px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: opacity 0.2s, transform 0.1s;
+      margin-bottom: 10px;
+    }
+    .btn-bt-connect:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-bt-connect:active { opacity: 0.8; transform: translateY(0); }
+    .btn-bt-connect:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+    .btn-bt-disconnect {
+      width: 100%;
+      background: rgba(200,200,210,0.35);
+      border: none;
+      border-radius: 999px;
+      padding: 15px 20px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      color: rgba(220,235,255,0.65);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: opacity 0.2s, background 0.2s;
+    }
+    .btn-bt-disconnect.active {
+      background: rgba(200,200,210,0.55);
+      color: rgba(220,235,255,0.9);
+      cursor: pointer;
+    }
+    .btn-bt-disconnect.active:hover { opacity: 0.85; }
+
+    /* Live Sensor Data card */
+    .sensor-card {
+      background: rgba(140, 185, 225, 0.38);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 22px;
+      padding: 22px 22px 32px;
+      border: 1px solid rgba(255,255,255,0.2);
+      text-align: center;
+    }
+    .sensor-value {
+      font-family: 'Boogaloo', cursive;
+      font-size: 5rem;
+      color: #e8f5a0;
+      line-height: 1;
+      margin: 18px 0 8px;
+      transition: opacity 0.3s;
+    }
+    .sensor-status {
+      font-family: 'Nunito', sans-serif;
+      font-size: 1rem;
+      color: #e8f5a0;
+      opacity: 0.85;
+    }
+
+    /* Status toast */
+    #status-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: rgba(30,50,90,0.92);
+      color: #e8f5a0;
+      border-radius: 999px;
+      padding: 10px 24px;
+      font-size: 0.88rem;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 600;
+      z-index: 999;
+      transition: transform 0.35s cubic-bezier(.34,1.56,.64,1);
+      white-space: nowrap;
+      max-width: 90vw;
+      text-align: center;
+    }
+    #status-toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* SVG icons inlined */
+    .icon { width: 20px; height: 20px; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+  <!-- Decorative elements (visual-only, match design) -->
+  <div class="deco-tan-tl"></div>
+  <div class="deco-pink-tr"></div>
+  <div class="deco-top-mr"></div>
+
+  <!-- Star top-left -->
+  <svg class="star star-tl" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M40 4 L46 34 L76 40 L46 46 L40 76 L34 46 L4 40 L34 34 Z" fill="#e8d5c5" opacity="0.85"/>
+  </svg>
+  <!-- Star top-right (pink) -->
+  <svg class="star star-tr" viewBox="0 0 70 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M35 3 L40 29 L66 35 L40 41 L35 67 L30 41 L4 35 L30 29 Z" fill="#d8a0a8" opacity="0.75"/>
+  </svg>
+
+  <div class="content">
+    <h1 class="title">EcoPulse Watch</h1>
+
+    <!-- Cloud Sync / Firebase Card -->
+    <div class="card">
+      <div class="card-title">Cloud Sync</div>
+      <input class="input-field" id="apiKey"       type="text"  placeholder="API key" />
+      <input class="input-field" id="databaseURL"  type="text"  placeholder="Database URL" />
+      <input class="input-field" id="nodeePath"    type="text"  placeholder="Node Path" value="sensor/data" />
+      <button class="btn-firebase" id="btnFirebase" onclick="connectFirebase()">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+        </svg>
+        Connect to Firebase
+      </button>
+    </div>
+
+    <!-- Microbit Bluetooth Card -->
+    <div class="card">
+      <div class="card-title">Microbit</div>
+      <button class="btn-bt-connect" id="btnConnect" onclick="connectBluetooth()">
+        <!-- Bluetooth icon -->
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"/>
+        </svg>
+        Connect
+      </button>
+      <button class="btn-bt-disconnect" id="btnDisconnect" onclick="disconnectBluetooth()" disabled>
+        <!-- Bluetooth-off icon -->
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="2" y1="2" x2="22" y2="22"/>
+          <polyline points="11.5 6.5 17.5 6.5 12 1 12 13"/>
+          <polyline points="6.5 17.5 12 23 12 17"/>
+        </svg>
+        Not Connect
+      </button>
+    </div>
+
+    <!-- Live Sensor Data Card -->
+    <div class="sensor-card">
+      <div class="card-title" style="margin-bottom:0">Live Sensor Data</div>
+      <div class="sensor-value" id="sensorValue">350</div>
+      <div class="sensor-status" id="sensorStatus">(Normal)</div>
+    </div>
+  </div>
+
+  <!-- Toast notification -->
+  <div id="status-toast"></div>
+
+  <script>
+    // ─── State ───────────────────────────────────────────────────────────────
+    let firebaseApp   = null;
+    let firebaseDb    = null;
+    let sensorRef     = null;
+    let btDevice      = null;
+    let btCharacteristic = null;
+    let firebaseConnected = false;
+
+    // ─── Micro:bit BLE UUIDs ─────────────────────────────────────────────────
+    // Micro:bit accelerometer / temperature / UART service UUIDs
+    const MICROBIT_UART_SERVICE      = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+    const MICROBIT_UART_TX_CHAR      = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // notify from device
+    const MICROBIT_UART_RX_CHAR      = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // write to device
+
+    // Sensor characteristic (temperature service as example)
+    const MICROBIT_TEMP_SERVICE      = 'e95d6100-251d-470a-a062-fa1922dfa9a8';
+    const MICROBIT_TEMP_CHAR         = 'e95d9250-251d-470a-a062-fa1922dfa9a8';
+
+    // ─── Toast helper ────────────────────────────────────────────────────────
+    let toastTimer = null;
+    function showToast(msg, duration = 3000) {
+      const el = document.getElementById('status-toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), duration);
+    }
+
+    // ─── Sensor classification ───────────────────────────────────────────────
+    function classifyValue(val) {
+      const n = parseFloat(val);
+      if (isNaN(n)) return '(Unknown)';
+      if (n < 100)  return '(Low)';
+      if (n < 400)  return '(Normal)';
+      if (n < 700)  return '(Elevated)';
+      return '(High)';
+    }
+
+    function updateSensorDisplay(value) {
+      const el   = document.getElementById('sensorValue');
+      const stat = document.getElementById('sensorStatus');
+      el.style.opacity = '0.4';
+      setTimeout(() => {
+        el.textContent   = value;
+        stat.textContent = classifyValue(value);
+        el.style.opacity = '1';
+      }, 150);
+    }
+
+    // ─── Firebase ────────────────────────────────────────────────────────────
+    function connectFirebase() {
+      const apiKey      = document.getElementById('apiKey').value.trim();
+      const databaseURL = document.getElementById('databaseURL').value.trim();
+      const nodePath    = document.getElementById('nodeePath').value.trim() || 'sensor/data';
+
+      if (!apiKey || !databaseURL) {
+        showToast('⚠️ Please enter API key and Database URL');
+        console.warn('[Firebase] Missing API key or Database URL');
+        return;
+      }
+
+      const btn = document.getElementById('btnFirebase');
+      btn.disabled = true;
+      btn.textContent = 'Connecting…';
+
+      try {
+        // Delete previous app instance if exists
+        if (firebaseApp) {
+          firebaseApp.delete().catch(() => {});
+          firebaseApp = null;
+          firebaseDb  = null;
+          sensorRef   = null;
+        }
+
+        const config = {
+          apiKey:      apiKey,
+          databaseURL: databaseURL.endsWith('/') ? databaseURL.slice(0, -1) : databaseURL,
+        };
+
+        firebaseApp = firebase.initializeApp(config, 'ecopulse-' + Date.now());
+        firebaseDb  = firebase.database(firebaseApp);
+        sensorRef   = firebaseDb.ref(nodePath);
+
+        console.log('[Firebase] Initializing with path:', nodePath);
+
+        // Test connection with a write then attach real-time listener
+        sensorRef.once('value')
+          .then(snapshot => {
+            firebaseConnected = true;
+            console.log('[Firebase] ✅ Connected. Current value:', snapshot.val());
+            showToast('✅ Firebase connected!');
+            btn.textContent = '✅ Connected';
+            btn.style.background = '#b8f0a0';
+
+            // Start real-time listener
+            attachFirebaseListener();
+          })
+          .catch(err => {
+            firebaseConnected = false;
+            console.error('[Firebase] ❌ Connection error:', err.message);
+            showToast('❌ Firebase error: ' + err.message);
+            btn.disabled = false;
+            resetFirebaseButton();
+          });
+
+      } catch (err) {
+        firebaseConnected = false;
+        console.error('[Firebase] ❌ Init error:', err.message);
+        showToast('❌ Firebase init error: ' + err.message);
+        btn.disabled = false;
+        resetFirebaseButton();
+      }
+    }
+
+    function resetFirebaseButton() {
+      const btn = document.getElementById('btnFirebase');
+      btn.disabled = false;
+      btn.innerHTML = `
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+        </svg>
+        Connect to Firebase`;
+      btn.style.background = '#e8f5a0';
+    }
+
+    function attachFirebaseListener() {
+      if (!sensorRef) return;
+
+      sensorRef.on('value',
+        snapshot => {
+          const val = snapshot.val();
+          console.log('[Firebase] 📡 Real-time update:', val);
+          if (val !== null && val !== undefined) {
+            const displayVal = (typeof val === 'object' && val.value !== undefined)
+              ? val.value
+              : val;
+            updateSensorDisplay(displayVal);
+          }
+        },
+        err => {
+          console.error('[Firebase] ❌ Real-time read error:', err.message);
+          showToast('❌ Firebase read error: ' + err.message);
+        }
+      );
+
+      console.log('[Firebase] 👂 Real-time listener attached to:', sensorRef.toString());
+    }
+
+    function writeToFirebase(value) {
+      if (!sensorRef || !firebaseConnected) {
+        console.warn('[Firebase] Not connected — skipping write');
+        return;
+      }
+      const payload = { value: value, timestamp: Date.now() };
+      sensorRef.set(payload)
+        .then(() => console.log('[Firebase] ✅ Wrote to Firebase:', payload))
+        .catch(err => console.error('[Firebase] ❌ Write error:', err.message));
+    }
+
+    // ─── Bluetooth ───────────────────────────────────────────────────────────
+    async function connectBluetooth() {
+      if (!navigator.bluetooth) {
+        showToast('❌ Web Bluetooth not supported in this browser');
+        console.error('[BT] Web Bluetooth API not available');
+        return;
+      }
+
+      console.log('[BT] Requesting Micro:bit device…');
+      const btnC = document.getElementById('btnConnect');
+      const btnD = document.getElementById('btnDisconnect');
+      btnC.disabled = true;
+      btnC.textContent = 'Scanning…';
+
+      try {
+        btDevice = await navigator.bluetooth.requestDevice({
+          filters: [
+            { namePrefix: 'BBC micro:bit' },
+            { namePrefix: 'microbit' },
+            { namePrefix: 'Micro:bit' },
+          ],
+          optionalServices: [
+            MICROBIT_UART_SERVICE,
+            MICROBIT_TEMP_SERVICE,
+            'generic_access',
+          ]
+        });
+
+        console.log('[BT] ✅ Device selected:', btDevice.name);
+        showToast('🔵 Connecting to ' + btDevice.name + '…');
+
+        btDevice.addEventListener('gattserverdisconnected', onBtDisconnected);
+
+        const server = await btDevice.gatt.connect();
+        console.log('[BT] ✅ GATT server connected');
+
+        // Try UART service first, fall back to temperature
+        let connected = false;
+
+        // Attempt UART (most common MakeCode programs use UART)
+        try {
+          const uartService = await server.getPrimaryService(MICROBIT_UART_SERVICE);
+          const txChar = await uartService.getCharacteristic(MICROBIT_UART_TX_CHAR);
+          await txChar.startNotifications();
+          txChar.addEventListener('characteristicvaluechanged', onUartData);
+          btCharacteristic = txChar;
+          connected = true;
+          console.log('[BT] ✅ UART service connected, listening for data');
+        } catch (e) {
+          console.warn('[BT] UART service not available, trying temperature…', e.message);
+        }
+
+        // Attempt temperature service
+        if (!connected) {
+          try {
+            const tempService = await server.getPrimaryService(MICROBIT_TEMP_SERVICE);
+            const tempChar = await tempService.getCharacteristic(MICROBIT_TEMP_CHAR);
+            await tempChar.startNotifications();
+            tempChar.addEventListener('characteristicvaluechanged', onTempData);
+            btCharacteristic = tempChar;
+            connected = true;
+            console.log('[BT] ✅ Temperature service connected');
+          } catch (e) {
+            console.warn('[BT] Temperature service not available:', e.message);
+          }
+        }
+
+        if (!connected) {
+          throw new Error('No supported Micro:bit service found. Check your MakeCode program exposes UART or temperature BLE service.');
+        }
+
+        // Update UI
+        btnC.textContent = '✅ Connected';
+        btnC.style.background = '#3d9c58';
+        btnD.disabled = false;
+        btnD.classList.add('active');
+
+        showToast('✅ Micro:bit connected: ' + btDevice.name);
+        console.log('[BT] ✅ Fully connected to', btDevice.name);
+
+      } catch (err) {
+        console.error('[BT] ❌ Connection failed:', err.message);
+        if (err.name !== 'NotFoundError') {
+          // NotFoundError = user cancelled picker, not a real error
+          showToast('❌ BT Error: ' + err.message);
+        } else {
+          console.log('[BT] User cancelled device picker');
+        }
+        resetBluetoothButtons();
+      }
+    }
+
+    function onUartData(event) {
+      const val = event.target.value;
+      const decoder = new TextDecoder('utf-8');
+      const text = decoder.decode(val).trim();
+      console.log('[BT] 📥 UART data received:', text);
+
+      // Parse: expect a number, possibly prefixed like "S:350" or just "350"
+      const numMatch = text.match(/[-\d.]+/);
+      if (numMatch) {
+        const sensorVal = parseFloat(numMatch[0]);
+        console.log('[BT] 🔢 Parsed sensor value:', sensorVal);
+        updateSensorDisplay(sensorVal);
+        writeToFirebase(sensorVal);
+      } else {
+        console.warn('[BT] Could not parse numeric value from:', text);
+      }
+    }
+
+    function onTempData(event) {
+      const val = event.target.value;
+      const temp = val.getInt8(0);
+      console.log('[BT] 🌡️ Temperature data received:', temp, '°C');
+      updateSensorDisplay(temp);
+      writeToFirebase(temp);
+    }
+
+    async function disconnectBluetooth() {
+      if (!btDevice) return;
+      console.log('[BT] Disconnecting…');
+      try {
+        if (btDevice.gatt.connected) {
+          await btDevice.gatt.disconnect();
+        }
+      } catch (e) {
+        console.warn('[BT] Disconnect error:', e.message);
+      }
+      onBtDisconnected();
+    }
+
+    function onBtDisconnected() {
+      console.log('[BT] 🔌 Device disconnected');
+      showToast('🔌 Micro:bit disconnected');
+      btDevice = null;
+      btCharacteristic = null;
+      resetBluetoothButtons();
+    }
+
+    function resetBluetoothButtons() {
+      const btnC = document.getElementById('btnConnect');
+      const btnD = document.getElementById('btnDisconnect');
+      btnC.disabled = false;
+      btnC.style.background = '#3d56c8';
+      btnC.innerHTML = `
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"/>
+        </svg>
+        Connect`;
+      btnD.disabled = true;
+      btnD.classList.remove('active');
+    }
+
+    // ─── Init log ────────────────────────────────────────────────────────────
+    console.log('[EcoPulse] App loaded. Firebase SDK and Web Bluetooth ready.');
+    console.log('[EcoPulse] Supported BLE services:');
+    console.log('  UART Service :', MICROBIT_UART_SERVICE);
+    console.log('  Temp Service :', MICROBIT_TEMP_SERVICE);
+  </script>
+</body>
+</html>
