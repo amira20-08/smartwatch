@@ -379,6 +379,7 @@
     let btDevice      = null;
     let btCharacteristic = null;
     let firebaseConnected = false;
+    let uartBuffer    = '';   // accumulates partial BLE UART packets
 
     // ─── Micro:bit BLE UUIDs ─────────────────────────────────────────────────
     // Micro:bit accelerometer / temperature / UART service UUIDs
@@ -506,9 +507,14 @@
           const val = snapshot.val();
           console.log('[Firebase] 📡 Real-time update:', val);
           if (val !== null && val !== undefined) {
-            const displayVal = (typeof val === 'object' && val.value !== undefined)
-              ? val.value
-              : val;
+            // Handle all payload shapes:
+            // { sensorGas: 350, timestamp: ... }  ← from MakeCode UART parser
+            // { value: 350, timestamp: ... }       ← legacy
+            // 350                                  ← plain number
+            const displayVal =
+              (typeof val === 'object' && val.sensorGas !== undefined) ? val.sensorGas :
+              (typeof val === 'object' && val.value    !== undefined) ? val.value :
+              val;
             updateSensorDisplay(displayVal);
           }
         },
@@ -526,7 +532,8 @@
         console.warn('[Firebase] Not connected — skipping write');
         return;
       }
-      const payload = { value: value, timestamp: Date.now() };
+      // Accept plain number or pre-built object
+      const payload = (typeof value === 'object') ? value : { value: value, timestamp: Date.now() };
       sensorRef.set(payload)
         .then(() => console.log('[Firebase] ✅ Wrote to Firebase:', payload))
         .catch(err => console.error('[Firebase] ❌ Write error:', err.message));
@@ -627,18 +634,60 @@
     function onUartData(event) {
       const val = event.target.value;
       const decoder = new TextDecoder('utf-8');
-      const text = decoder.decode(val).trim();
-      console.log('[BT] 📥 UART data received:', text);
+      // Append incoming chunk to buffer (BLE may split packets)
+      uartBuffer += decoder.decode(val);
+      console.log('[BT] 📥 UART chunk received, buffer:', JSON.stringify(uartBuffer));
 
-      // Parse: expect a number, possibly prefixed like "S:350" or just "350"
-      const numMatch = text.match(/[-\d.]+/);
-      if (numMatch) {
-        const sensorVal = parseFloat(numMatch[0]);
-        console.log('[BT] 🔢 Parsed sensor value:', sensorVal);
-        updateSensorDisplay(sensorVal);
-        writeToFirebase(sensorVal);
-      } else {
-        console.warn('[BT] Could not parse numeric value from:', text);
+      // Process every complete line (terminated by \n)
+      const lines = uartBuffer.split('\n');
+      // Last element is incomplete (no \n yet) — keep it in buffer
+      uartBuffer = lines.pop();
+
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line) continue;
+        console.log('[BT] 📋 Parsing line:', line);
+
+        // MakeCode sends:  "Sensor gas=350"  and  "mode=1"
+        // Format: key=value  (key may contain spaces)
+        const eqIdx = line.indexOf('=');
+        if (eqIdx === -1) {
+          console.warn('[BT] No "=" found in line, skipping:', line);
+          continue;
+        }
+
+        const key   = line.substring(0, eqIdx).trim().toLowerCase();
+        const value = line.substring(eqIdx + 1).trim();
+        const numVal = parseFloat(value);
+
+        console.log(`[BT] 🔑 key="${key}" value="${value}" (parsed: ${numVal})`);
+
+        if (key === 'sensor gas' || key === 'sensor_gas' || key === 'sensorgas') {
+          // Gas sensor reading — main data we want
+          if (!isNaN(numVal)) {
+            console.log('[BT] 🔢 Sensor gas value:', numVal);
+            updateSensorDisplay(numVal);
+            writeToFirebase({ sensorGas: numVal, timestamp: Date.now() });
+          }
+        } else if (key === 'mode') {
+          // Mode flag (0 = manual, 1 = automatic)
+          console.log('[BT] ⚙️ Mode:', numVal === 1 ? 'Automatic' : 'Manual');
+          // Optionally write mode to Firebase too
+          if (firebaseConnected && sensorRef && !isNaN(numVal)) {
+            firebaseDb.ref(
+              document.getElementById('nodeePath').value.trim().replace(/\/[^/]+$/, '/mode') || 'sensor/mode'
+            ).set(numVal).catch(e => console.warn('[Firebase] Mode write error:', e.message));
+          }
+        } else {
+          // Unknown key — try to display if numeric
+          if (!isNaN(numVal)) {
+            console.log('[BT] ❓ Unknown key, displaying value anyway:', numVal);
+            updateSensorDisplay(numVal);
+            writeToFirebase({ value: numVal, key: key, timestamp: Date.now() });
+          } else {
+            console.warn('[BT] Unknown non-numeric line:', line);
+          }
+        }
       }
     }
 
@@ -668,6 +717,7 @@
       showToast('🔌 Micro:bit disconnected');
       btDevice = null;
       btCharacteristic = null;
+      uartBuffer = '';   // clear any partial packet
       resetBluetoothButtons();
     }
 
